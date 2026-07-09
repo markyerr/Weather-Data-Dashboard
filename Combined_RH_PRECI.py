@@ -82,8 +82,7 @@ def generate_chart(epw):
             colorbar=dict(
                 title="%",
                 x=-0.1,  # Position the colorbar on the far left side
-                xanchor="right",
-                titleside="top"
+                xanchor="right"
             ),
             name="Relative Humidity (%)",
             hovertemplate="Day: %{x}<br>Hour: %{y}<br>RH: %{z:.1f}%<extra></extra>"
