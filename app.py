@@ -14,17 +14,15 @@ import Sunpath
 import TH_RH
 import Psychrometric
 import Precipitation
-import Combined_RH_PRECI
 
 st.set_page_config(page_title="Climate Analytics Dashboard", layout="wide")
 
-def generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psych_fig, precip_fig, combined_rh_preci_fig):
+def generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psych_fig, precip_fig):
     wind_html = wind_fig.to_html(full_html=False, include_plotlyjs='cdn')
     sunpath_html = sunpath_fig.to_html(full_html=False, include_plotlyjs=False)
     th_rh_html = th_rh_fig.to_html(full_html=False, include_plotlyjs=False)
     psych_html = psych_fig.to_html(full_html=False, include_plotlyjs=False)
     precip_html = precip_fig.to_html(full_html=False, include_plotlyjs=False)
-    combined_rh_preci_html = combined_rh_preci_fig.to_html(full_html=False, include_plotlyjs=False)
     
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -50,7 +48,6 @@ def generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psy
         <div class="row"><div class="col-12"><div class="card"><div class="card-header">Temperature & Humidity Heatmap</div><div class="card-body">{th_rh_html}</div></div></div></div>
         <div class="row"><div class="col-12"><div class="card"><div class="card-header">Psychrometric Analysis</div><div class="card-body">{psych_html}</div></div></div></div>
         <div class="row"><div class="col-12"><div class="card"><div class="card-header">Precipitation Analysis</div><div class="card-body">{precip_html}</div></div></div></div>
-        <div class="row"><div class="col-12"><div class="card"><div class="card-header">Combined RH & Precipitation</div><div class="card-body">{combined_rh_preci_html}</div></div></div></div>
     </div>
 </body>
 </html>"""
@@ -185,12 +182,11 @@ def main():
             sunpath_fig = Sunpath.generate_chart(epw)
             psych_fig = Psychrometric.generate_chart(epw)
             precip_fig = Precipitation.generate_chart(epw)
-            combined_rh_preci_fig = Combined_RH_PRECI.generate_chart(epw)
             
         # Add Export Button to Sidebar
         st.sidebar.divider()
         st.sidebar.header("Export")
-        static_html = generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psych_fig, precip_fig, combined_rh_preci_fig)
+        static_html = generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psych_fig, precip_fig)
         st.sidebar.download_button(
             label="📦 Download Dashboard as HTML",
             data=static_html,
@@ -227,10 +223,6 @@ def main():
         st.divider()
         st.subheader("Precipitation Analysis")
         st.plotly_chart(precip_fig, use_container_width=True)
-
-        st.divider()
-        st.subheader("Combined RH & Precipitation")
-        st.plotly_chart(combined_rh_preci_fig, use_container_width=True)
     else:
         if data_source != "Use Default Data (Bangkok)":
             st.info("Please provide data to view the dashboard.")

@@ -32,11 +32,8 @@ def generate_chart(epw):
     # Create a DataFrame to easily group and aggregate the data
     df = pd.DataFrame({"Precipitation": precip_values}, index=date_range)
     
-    # Group the hourly data by month and calculate the sum for each month
-    monthly_totals = df.groupby(df.index.month).sum()
-    
-    # List of month names for the X-axis
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    # Group the hourly data by day of the year and calculate the sum for each day
+    daily_totals = df.groupby(df.index.dayofyear).sum()
     
     # Initialize the Plotly Figure
     fig = go.Figure()
@@ -44,21 +41,36 @@ def generate_chart(epw):
     # Add a scatter trace configured to look like a filled line chart
     fig.add_trace(
         go.Scatter(
-            x=months,
-            y=monthly_totals["Precipitation"],
-            mode="lines+markers",
-            name="Precipitation",
-            line=dict(color="#1f77b4", width=2),     # Standard Plotly blue
-            marker=dict(size=8, color="#1f77b4"),    # Markers at each data point
+            x=daily_totals.index,
+            y=daily_totals["Precipitation"],
+            mode="lines",
+            name="Daily Precipitation",
+            line=dict(color="#1f77b4", width=1.5),     # Standard Plotly blue
             fill="tozeroy",                          # Fill area down to the X-axis (Y=0)
             fillcolor="rgba(173, 216, 230, 0.4)"     # Light blue color with 40% opacity
         )
     )
     
+    # Calculate X-axis ticks for month names
+    month_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    month_names = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+    tick_vals = []
+    current_day = 0
+    for d in month_days:
+        tick_vals.append(current_day + d / 2)  # Middle of the month
+        current_day += d
+
     # Update the layout to make it clean, descriptive, and standard
     fig.update_layout(
-        title="Total Monthly Precipitation",
-        xaxis_title="Month",
+        title="Annual Daily Precipitation",
+        xaxis=dict(
+            title="",
+            tickmode='array',
+            tickvals=tick_vals,
+            ticktext=month_names,
+            range=[1, 365],
+            showgrid=False
+        ),
         yaxis_title="Total Precipitation (mm)",
         template="plotly_white",
         hovermode="x unified",

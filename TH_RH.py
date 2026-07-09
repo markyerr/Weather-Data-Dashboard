@@ -6,93 +6,167 @@ def generate_chart(epw):
     """
     Generates a Plotly Figure containing two vertically stacked hourly heatmaps:
     1. Dry Bulb Temperature
-    2. Relative Humidity
+    2. Relative Humidity & Annual Daily Precipitation
     
     Args:
         epw: A parsed ladybug.epw.EPW object containing 8760 hourly weather data.
         
     Returns:
-        go.Figure: The generated Plotly figure containing the two heatmaps.
+        go.Figure: The generated Plotly figure containing the two subplots.
     """
-    # Extract location name to use in the chart title
+    # Extract location name
     location = epw.location.city if hasattr(epw.location, 'city') else "Unknown Location"
     
-    # Extract the 8760 hourly values for Dry Bulb Temperature and Relative Humidity
-    # Ladybug data collection objects have a .values property that returns the hourly data
+    # Extract data
     temps = epw.dry_bulb_temperature.values
     rh = epw.relative_humidity.values
+    precip_values = epw.liquid_precipitation_depth.values
     
-    # EPW data is sequential (Hour 0 to 23 for Day 1, Hour 0 to 23 for Day 2, etc.)
-    # We reshape the 1D list of 8760 values into a 2D array of (365 days, 24 hours).
-    # Then we transpose it (.T) to get (24 hours, 365 days) so the Y-axis maps to hours and X-axis to days.
-    temps_2d = np.array(temps).reshape((365, 24)).T
-    rh_2d = np.array(rh).reshape((365, 24)).T
+    # Reshape into (24 hours, 365 days)
+    temps_matrix = np.array(temps).reshape((365, 24)).T
+    rh_matrix = np.array(rh).reshape((365, 24)).T
     
-    # Create the axis labels
-    hours = list(range(24))
-    days = list(range(1, 366))
+    # Process precip into 365 daily totals
+    daily_precip = np.array(precip_values).reshape((365, 24)).sum(axis=1)
     
-    # Create subplots: 2 rows, 1 column, sharing the X-axis (days of the year)
+    # Create subplots
     fig = make_subplots(
         rows=2, cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.1,
-        subplot_titles=("Dry Bulb Temperature (°C)", "Relative Humidity (%)")
+        shared_xaxes=False, # We want x-axis labels on both
+        vertical_spacing=0.15,
+        specs=[
+            [{"secondary_y": False}],
+            [{"secondary_y": True}]
+        ],
+        subplot_titles=("HEATMAP", "RELATIVE HUMIDITY (%) & ANNUAL DAILY PRECIPITATION")
     )
     
-    # Add Temperature Heatmap to the top subplot (row 1)
+    days = list(range(1, 366))
+    hours = list(range(1, 25))
+    
+    # Custom colorscale for Temperature (Blue -> Purple -> Red -> Yellow)
+    temp_colorscale = [
+        [0.0, "deepskyblue"],
+        [0.25, "mediumblue"],
+        [0.5, "indigo"],
+        [0.75, "firebrick"],
+        [1.0, "gold"]
+    ]
+    
+    # Custom colorscale for RH
+    rh_colorscale = [
+        [0.0, "gold"],
+        [0.25, "yellowgreen"],
+        [0.5, "cyan"],
+        [0.75, "dodgerblue"],
+        [1.0, "darkblue"]
+    ]
+    
+    # 1. Add Temp Heatmap (row 1)
     fig.add_trace(
         go.Heatmap(
-            z=temps_2d,
+            z=temps_matrix,
             x=days,
             y=hours,
-            colorscale='Thermal', # Appropriate color scale for temperature
-            colorbar=dict(title="Temp (°C)", x=1.02, y=0.78, len=0.45),
+            colorscale=temp_colorscale,
+            colorbar=dict(
+                title="°C",
+                x=-0.05,
+                y=0.78,
+                len=0.4,
+                xanchor="right"
+            ),
+            name="Temperature (°C)",
             hovertemplate="Day: %{x}<br>Hour: %{y}<br>Temp: %{z:.1f}°C<extra></extra>"
         ),
         row=1, col=1
     )
     
-    # Add Relative Humidity Heatmap to the bottom subplot (row 2)
+    # 2. Add RH Heatmap (row 2)
     fig.add_trace(
         go.Heatmap(
-            z=rh_2d,
+            z=rh_matrix,
             x=days,
             y=hours,
-            colorscale='Tealgrn', # Appropriate color scale for humidity
-            colorbar=dict(title="RH (%)", x=1.02, y=0.22, len=0.45),
+            colorscale=rh_colorscale,
+            colorbar=dict(
+                title="%",
+                x=-0.05,
+                y=0.22,
+                len=0.4,
+                xanchor="right"
+            ),
+            name="Relative Humidity (%)",
             hovertemplate="Day: %{x}<br>Hour: %{y}<br>RH: %{z:.1f}%<extra></extra>"
         ),
-        row=2, col=1
+        row=2, col=1, secondary_y=False
     )
     
-    # Update layout properties for clean aesthetics and clear axes
+    # 3. Add Precip Line (row 2, secondary y)
+    fig.add_trace(
+        go.Scatter(
+            x=days,
+            y=daily_precip,
+            mode='lines',
+            line=dict(color='white', width=1.5),
+            name="Daily Precipitation",
+            hovertemplate="Day: %{x}<br>Precipitation: %{y:.1f} mm<extra></extra>"
+        ),
+        row=2, col=1, secondary_y=True
+    )
+    
+    # Add Toggle button for Precipitation
     fig.update_layout(
-        title=f"Hourly Heatmaps of Temperature & Relative Humidity - {location}",
-        title_x=0.5,
-        height=800, # Taller height to accommodate two vertically stacked subplots
-        yaxis=dict(
-            title="Hour of Day",
-            tickmode='array',
-            tickvals=[0, 6, 12, 18, 23],
-            ticktext=['0:00', '6:00', '12:00', '18:00', '23:00'],
-            autorange='reversed' # Reversing the Y-axis so 0:00 starts at the top
-        ),
-        yaxis2=dict(
-            title="Hour of Day",
-            tickmode='array',
-            tickvals=[0, 6, 12, 18, 23],
-            ticktext=['0:00', '6:00', '12:00', '18:00', '23:00'],
-            autorange='reversed'
-        ),
-        xaxis2=dict(
-            title="Day of Year",
-            tickmode='array',
-            tickvals=[1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335], # Approximate start of months
-            ticktext=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        ),
-        plot_bgcolor='white'
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="left",
+                buttons=list([
+                    dict(
+                        label="Toggle Precipitation",
+                        method="restyle",
+                        args=[{"visible": [True, True, True]}],
+                        args2=[{"visible": [True, True, False]}]
+                    )
+                ]),
+                showactive=False,
+                x=1.0,
+                xanchor="right",
+                y=1.1,
+                yanchor="top"
+            )
+        ]
     )
     
-    # Return the generated Figure object to the calling script
+    # Formatting
+    month_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    month_names = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+    tick_vals = []
+    current_day = 0
+    for d in month_days:
+        tick_vals.append(current_day + d / 2)
+        current_day += d
+        
+    fig.update_layout(
+        height=900,
+        margin=dict(l=100, r=50, t=80, b=50),
+        plot_bgcolor='white',
+        title=dict(text=f"Temperature & Humidity Heatmaps - {location}", x=0.5)
+    )
+    
+    # Axes formatting
+    # Top subplot X (Days)
+    fig.update_xaxes(tickmode='array', tickvals=tick_vals, ticktext=month_names, range=[0.5, 365.5], row=1, col=1, showgrid=True, gridcolor='rgba(200,200,200,0.5)', gridwidth=1)
+    # Bottom subplot X (Days)
+    fig.update_xaxes(tickmode='array', tickvals=tick_vals, ticktext=month_names, range=[0.5, 365.5], row=2, col=1, showgrid=True, gridcolor='rgba(200,200,200,0.5)', gridwidth=1)
+    
+    # Top subplot Y (Hours)
+    fig.update_yaxes(title_text="Hour", tickmode='linear', tick0=2, dtick=2, range=[0.5, 24.5], row=1, col=1, showgrid=True, gridcolor='rgba(200,200,200,0.5)', gridwidth=1)
+    
+    # Bottom subplot primary Y (Hours)
+    fig.update_yaxes(title_text="Hour", tickmode='linear', tick0=2, dtick=2, range=[0.5, 24.5], row=2, col=1, secondary_y=False, showgrid=True, gridcolor='rgba(200,200,200,0.5)', gridwidth=1)
+    
+    # Bottom subplot secondary Y (Precipitation)
+    fig.update_yaxes(title_text="Precipitation (mm)", rangemode='nonnegative', row=2, col=1, secondary_y=True, showgrid=False)
+    
     return fig
