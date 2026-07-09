@@ -174,6 +174,9 @@ def main():
 
     if epw is not None:
         st.divider()
+        st.sidebar.header("Chart Settings")
+        sunpath_min = st.sidebar.number_input("Sunpath Min Radiation (Wh/m²)", value=0, step=100)
+        sunpath_max = st.sidebar.number_input("Sunpath Max Radiation (Wh/m²)", value=1000, step=100)
         
         # Generate figures first so we can package them
         location_html = Location.get_info_table(epw)
@@ -181,7 +184,7 @@ def main():
         with st.spinner("Generating Charts..."):
             wind_fig = Wind_Data.generate_chart(epw)
             th_rh_fig = TH_RH.generate_chart(epw)
-            sunpath_fig = Sunpath.generate_chart(epw)
+            sunpath_fig = Sunpath.generate_chart(epw, min_rad=sunpath_min, max_rad=sunpath_max)
             psych_fig = Psychrometric.generate_chart(epw)
             precip_fig = Precipitation.generate_chart(epw)
             

@@ -4,7 +4,7 @@ from ladybug.sunpath import Sunpath
 from ladybug.dt import DateTime
 import math
 
-def generate_chart(epw):
+def generate_chart(epw, min_rad=0, max_rad=1000):
     """
     Generates an interactive SunPath diagram using Plotly with 3 views:
     1. Top-down Polar View (Center)
@@ -157,6 +157,18 @@ def generate_chart(epw):
     )
 
     line_color = 'rgba(150, 150, 150, 0.4)'
+    custom_colorscale = [
+        [0.0, '#4d6ba4'], [0.1, '#4d6ba4'],
+        [0.1, '#97b9ee'], [0.2, '#97b9ee'],
+        [0.2, '#bbd4e1'], [0.3, '#bbd4e1'],
+        [0.3, '#e2eda9'], [0.4, '#e2eda9'],
+        [0.4, '#faf572'], [0.5, '#faf572'],
+        [0.5, '#f9ce34'], [0.6, '#f9ce34'],
+        [0.6, '#f4a019'], [0.7, '#f4a019'],
+        [0.7, '#ed720b'], [0.8, '#ed720b'],
+        [0.8, '#ea3800'], [0.9, '#ea3800'],
+        [0.9, '#e71000'], [1.0, '#e71000']
+    ]
     
     # --- TOP VIEW (Polar) ---
     fig.add_trace(go.Scatterpolar(
@@ -171,12 +183,11 @@ def generate_chart(epw):
         hoverinfo='skip', showlegend=False
     ), row=1, col=1)
     
-    max_color = max(dots_color) if dots_color else 1000
     fig.add_trace(go.Scatterpolar(
         r=dots_alt_polar, theta=dots_azi, mode='markers',
         marker=dict(
-            size=7, color=dots_color, colorscale='Turbo',
-            cmin=0, cmax=max_color,
+            size=7, color=dots_color, colorscale=custom_colorscale,
+            cmin=min_rad, cmax=max_rad,
             showscale=True,
             colorbar=dict(
                 title='Wh/m²',
@@ -199,7 +210,7 @@ def generate_chart(epw):
     
     fig.add_trace(go.Scatter(x=daily_sx, y=daily_sy, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=1)
     fig.add_trace(go.Scatter(x=ana_sx, y=ana_sy, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=1)
-    fig.add_trace(go.Scatter(x=dots_sx, y=dots_sy, mode='markers', marker=dict(size=4.5, color=dots_color, colorscale='Turbo', cmin=0, cmax=max_color, line=dict(color='black', width=0.5)), text=dots_text, hoverinfo='text', showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter(x=dots_sx, y=dots_sy, mode='markers', marker=dict(size=4.5, color=dots_color, colorscale=custom_colorscale, cmin=min_rad, cmax=max_rad, line=dict(color='black', width=0.5)), text=dots_text, hoverinfo='text', showlegend=False), row=2, col=1)
 
     # --- EAST ELEVATION ---
     fig.add_trace(go.Scatter(x=dome_x, y=dome_z, mode='lines', line=dict(color='lightgray', width=1, dash='dash'), hoverinfo='skip', showlegend=False), row=2, col=2)
@@ -207,16 +218,12 @@ def generate_chart(epw):
     
     fig.add_trace(go.Scatter(x=daily_ex, y=daily_ey, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=2)
     fig.add_trace(go.Scatter(x=ana_ex, y=ana_ey, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=2)
-    fig.add_trace(go.Scatter(x=dots_ex, y=dots_ey, mode='markers', marker=dict(size=4.5, color=dots_color, colorscale='Turbo', cmin=0, cmax=max_color, line=dict(color='black', width=0.5)), text=dots_text, hoverinfo='text', showlegend=False), row=2, col=2)
+    fig.add_trace(go.Scatter(x=dots_ex, y=dots_ey, mode='markers', marker=dict(size=4.5, color=dots_color, colorscale=custom_colorscale, cmin=min_rad, cmax=max_rad, line=dict(color='black', width=0.5)), text=dots_text, hoverinfo='text', showlegend=False), row=2, col=2)
 
     # --- LAYOUT UPDATES ---
     fig.update_layout(
         autosize=True,
-        title=dict(
-            text=f"<b>SUN PATH</b><br><span style='font-size:14px; color:gray'>SOLAR RADIATION ANALYSIS</span><br><b>{location.city.upper()}, {location.country.upper()}</b>",
-            font=dict(family="Arial"),
-            x=0.05, y=0.95
-        ),
+        font=dict(family="Arial", color="black"),
         polar=dict(
             radialaxis=dict(visible=True, range=[0, 90], tickvals=[0, 15, 30, 45, 60, 75, 90], ticktext=['90°', '75°', '60°', '45°', '30°', '15°', '0°'], showline=False, gridcolor='lightgray'),
             angularaxis=dict(visible=True, direction='clockwise', rotation=90, tickvals=[0, 45, 90, 135, 180, 225, 270, 315], ticktext=['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], gridcolor='lightgray'),
@@ -224,13 +231,11 @@ def generate_chart(epw):
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
-        margin=dict(t=120, b=40, l=40, r=40),
-        annotations=[
-            dict(text="SUMMER SOLSTICE", x=0.95, y=0.85, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="gray", family="Arial")),
-            dict(text="EQUINOX", x=0.95, y=0.72, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="gray", family="Arial")),
-            dict(text="WINTER SOLSTICE", x=0.95, y=0.58, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="gray", family="Arial"))
-        ]
+        margin=dict(t=40, b=40, l=40, r=40)
     )
+
+    # Force subplot titles to be black
+    fig.update_annotations(font=dict(color="black"))
 
     fig.update_xaxes(title_text="West (W) ⟶ East (E)", range=[-1.1, 1.1], showgrid=False, zeroline=False, showticklabels=False, row=2, col=1)
     fig.update_yaxes(title_text="Altitude", range=[-0.05, 1.1], showgrid=False, zeroline=False, showticklabels=False, scaleanchor="x", scaleratio=1, row=2, col=1)
