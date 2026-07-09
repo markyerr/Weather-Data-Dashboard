@@ -204,18 +204,16 @@ def main():
         st.divider()
         
         # 2. Charts Layout
-        col_left, col_right = st.columns(2)
-        
-        with col_left:
-            st.subheader("Wind Rose Analysis")
-            st.plotly_chart(wind_fig, use_container_width=True)
+        st.subheader("Wind Rose Analysis")
+        st.plotly_chart(wind_fig, use_container_width=True)
                 
-        with col_right:
-            st.subheader("Sunpath Diagram")
-            st.plotly_chart(sunpath_fig, use_container_width=True)
+        st.divider()
+        st.subheader("Sunpath Diagram")
+        st.plotly_chart(sunpath_fig, use_container_width=True)
                 
-            st.subheader("Psychrometric Analysis")
-            st.plotly_chart(psych_fig, use_container_width=True)
+        st.divider()
+        st.subheader("Psychrometric Analysis")
+        st.plotly_chart(psych_fig, use_container_width=True)
             
         st.divider()
         st.subheader("Temperature & Humidity Heatmap")
