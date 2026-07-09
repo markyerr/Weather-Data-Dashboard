@@ -18,11 +18,11 @@ import Precipitation
 st.set_page_config(page_title="Climate Analytics Dashboard", layout="wide")
 
 def generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psych_fig, precip_fig):
-    wind_html = wind_fig.to_html(full_html=False, include_plotlyjs='cdn')
-    sunpath_html = sunpath_fig.to_html(full_html=False, include_plotlyjs=False)
-    th_rh_html = th_rh_fig.to_html(full_html=False, include_plotlyjs=False)
-    psych_html = psych_fig.to_html(full_html=False, include_plotlyjs=False)
-    precip_html = precip_fig.to_html(full_html=False, include_plotlyjs=False)
+    wind_html = wind_fig.to_html(full_html=False, include_plotlyjs='cdn', default_height='100%', default_width='100%')
+    sunpath_html = sunpath_fig.to_html(full_html=False, include_plotlyjs=False, default_height='100%', default_width='100%')
+    th_rh_html = th_rh_fig.to_html(full_html=False, include_plotlyjs=False, default_height='100%', default_width='100%')
+    psych_html = psych_fig.to_html(full_html=False, include_plotlyjs=False, default_height='100%', default_width='100%')
+    precip_html = precip_fig.to_html(full_html=False, include_plotlyjs=False, default_height='100%', default_width='100%')
     
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -36,7 +36,7 @@ def generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psy
         .dashboard-header {{ margin-top: 2rem; margin-bottom: 2rem; text-align: center; font-weight: 700; color: #2c3e50; }}
         .card {{ margin-bottom: 1.5rem; border: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
         .card-header {{ font-weight: 600; background-color: #ffffff; border-bottom: 1px solid #edf2f7; padding: 1rem 1.25rem; font-size: 1.1rem; color: #34495e; }}
-        .card-body {{ padding: 1.5rem; }}
+        .card-body {{ padding: 1.5rem; aspect-ratio: 16 / 9; overflow: hidden; }}
     </style>
 </head>
 <body>
@@ -193,6 +193,14 @@ def main():
             file_name="climate_dashboard.html",
             mime="text/html"
         )
+        
+        # Adjust heights explicitly for Streamlit rendering to ensure they aren't squished 
+        # (Streamlit doesn't support aspect-ratio scaling natively)
+        wind_fig.update_layout(height=800)
+        sunpath_fig.update_layout(height=800)
+        psych_fig.update_layout(height=800)
+        th_rh_fig.update_layout(height=900)
+        precip_fig.update_layout(height=600)
         
         # 1. Location Summary
         st.header("Location Summary")

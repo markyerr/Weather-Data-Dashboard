@@ -152,8 +152,7 @@ def generate_chart(epw):
         current_day += d
         
     fig.update_layout(
-        height=1440,
-        width=2560,
+        autosize=True,
         margin=dict(l=100, r=50, t=80, b=50),
         plot_bgcolor='white',
         title=dict(text=f"Temperature & Humidity Heatmaps - {location}", x=0.5)

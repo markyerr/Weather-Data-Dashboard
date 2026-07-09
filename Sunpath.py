@@ -93,8 +93,7 @@ def generate_chart(epw):
 
     # 6. Define the chart layout for the SunPath
     fig.update_layout(
-        width=2560,
-        height=1440,
+        autosize=True,
         title=dict(
             text=f"Sun Path - {location.city}, {location.country}",
             font=dict(size=18, family="Arial"),

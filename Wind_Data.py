@@ -199,8 +199,7 @@ def generate_chart(epw):
             font=dict(size=24, family="Arial Black"),
             x=0.5
         ),
-        height=1440,
-        width=2560,
+        autosize=True,
         barmode='stack',
         template='plotly_white',
         legend=dict(
