@@ -163,6 +163,12 @@ def main():
                 
     elif data_source == "Provide EPW/ZIP URL":
         url_input = st.sidebar.text_input("Enter URL (e.g., from EnergyPlus):")
+        
+        import streamlit.components.v1 as components
+        with st.sidebar:
+            st.caption("Use the map below to find and copy an EPW URL:")
+            components.iframe("https://www.ladybug.tools/epwmap/", height=450, scrolling=True)
+            
         if url_input:
             try:
                 epw = fetch_and_unzip_epw(url_input)
