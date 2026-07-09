@@ -14,7 +14,7 @@
     maxUploadSize = 500 
 
 # Run the app without opening a browser window automatically (Useful for cloud deployment)
-    headless = false
+    headless = true
 
 
 [browser]
