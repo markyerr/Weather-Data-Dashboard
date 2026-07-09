@@ -174,67 +174,70 @@ def main():
 
     if epw is not None:
         st.divider()
-        st.sidebar.header("Chart Settings")
-        sunpath_min = st.sidebar.number_input("Sunpath Min Radiation (Wh/m²)", value=0, step=100)
-        sunpath_max = st.sidebar.number_input("Sunpath Max Radiation (Wh/m²)", value=1000, step=100)
-        
-        # Generate figures first so we can package them
-        location_html = Location.get_info_table(epw)
-        
-        with st.spinner("Generating Charts..."):
-            wind_fig = Wind_Data.generate_chart(epw)
-            th_rh_fig = TH_RH.generate_chart(epw)
-            sunpath_fig = Sunpath.generate_chart(epw, min_rad=sunpath_min, max_rad=sunpath_max)
-            psych_fig = Psychrometric.generate_chart(epw)
-            precip_fig = Precipitation.generate_chart(epw)
-            
-        # Add Export Button to Sidebar
-        st.sidebar.divider()
-        st.sidebar.header("Export")
-        static_html = generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psych_fig, precip_fig)
-        st.sidebar.download_button(
-            label="📦 Download Dashboard as HTML",
-            data=static_html,
-            file_name="climate_dashboard.html",
-            mime="text/html"
-        )
-        
-        # Adjust heights explicitly for Streamlit rendering to ensure they aren't squished 
-        # (Streamlit doesn't support aspect-ratio scaling natively)
-        wind_fig.update_layout(height=800)
-        sunpath_fig.update_layout(height=800)
-        psych_fig.update_layout(height=800)
-        th_rh_fig.update_layout(height=900)
-        precip_fig.update_layout(height=600)
         
         # 1. Location Summary
         st.header("Location Summary")
+        location_html = Location.get_info_table(epw)
         col1, col2, col3 = st.columns([1, 6, 1])
         with col2:
-            # Use st.html (modern Streamlit feature) and textwrap.dedent to fix raw code rendering issue
             st.html(textwrap.dedent(location_html))
         
         st.divider()
         
         # 2. Charts Layout
         st.subheader("Wind Rose Analysis")
+        with st.spinner("Generating Wind Rose..."):
+            wind_fig = Wind_Data.generate_chart(epw)
+            wind_fig.update_layout(height=800)
         st.plotly_chart(wind_fig, use_container_width=True)
                 
         st.divider()
         st.subheader("Sunpath Diagram")
+        
+        # Sunpath Settings
+        col1, col2, _ = st.columns([1, 1, 2])
+        with col1:
+            sunpath_min = st.number_input("Min Radiation (Wh/m²)", value=0, step=100)
+        with col2:
+            sunpath_max = st.number_input("Max Radiation (Wh/m²)", value=1000, step=100)
+            
+        with st.spinner("Generating Sunpath..."):
+            sunpath_fig = Sunpath.generate_chart(epw, min_rad=sunpath_min, max_rad=sunpath_max)
+            sunpath_fig.update_layout(height=800)
         st.plotly_chart(sunpath_fig, use_container_width=True)
                 
         st.divider()
         st.subheader("Psychrometric Analysis")
+        with st.spinner("Generating Psychrometric Chart..."):
+            psych_fig = Psychrometric.generate_chart(epw)
+            psych_fig.update_layout(height=800)
         st.plotly_chart(psych_fig, use_container_width=True)
             
         st.divider()
         st.subheader("Temperature & Humidity Heatmap")
+        with st.spinner("Generating Heatmap..."):
+            th_rh_fig = TH_RH.generate_chart(epw)
+            th_rh_fig.update_layout(height=900)
         st.plotly_chart(th_rh_fig, use_container_width=True)
             
         st.divider()
         st.subheader("Precipitation Analysis")
+        with st.spinner("Generating Precipitation Chart..."):
+            precip_fig = Precipitation.generate_chart(epw)
+            precip_fig.update_layout(height=600)
         st.plotly_chart(precip_fig, use_container_width=True)
+        
+        # Add Export Button to Sidebar
+        st.sidebar.divider()
+        st.sidebar.header("Export")
+        with st.spinner("Packaging Dashboard..."):
+            static_html = generate_html_dashboard(location_html, wind_fig, sunpath_fig, th_rh_fig, psych_fig, precip_fig)
+        st.sidebar.download_button(
+            label="📦 Download Dashboard as HTML",
+            data=static_html,
+            file_name="climate_dashboard.html",
+            mime="text/html"
+        )
     else:
         if data_source == "Provide EPW/ZIP URL":
             st.info("Please provide data to view the dashboard.")
