@@ -1,133 +1,241 @@
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from ladybug.sunpath import Sunpath
+from ladybug.dt import DateTime
+import math
 
 def generate_chart(epw):
     """
-    Generates an interactive SunPath diagram using Plotly.
-    
-    This function extracts the location and global horizontal radiation from 
-    a Ladybug EPW object. It then calculates the sun's position for every hour 
-    of the year and plots these positions on a polar chart, mapped with the 
-    radiation data as a color scale.
-    
-    Args:
-        epw: A parsed ladybug.epw.EPW object.
-        
-    Returns:
-        go.Figure: The final Plotly figure object representing the SunPath.
+    Generates an interactive SunPath diagram using Plotly with 3 views:
+    1. Top-down Polar View (Center)
+    2. South Elevation (Bottom Left)
+    3. East Elevation (Bottom Right)
     """
-    # 1. Extract location data from the EPW object
+    # 1. Extract location and radiation
     location = epw.location
-    
-    # 2. Extract global horizontal radiation data
-    # Checking for both typical ladybug property and user-specified 'global_horizontal_rad'
     if hasattr(epw, 'global_horizontal_radiation'):
         gh_rad_collection = epw.global_horizontal_radiation
     elif hasattr(epw, 'global_horizontal_rad'):
         gh_rad_collection = epw.global_horizontal_rad
     else:
-        raise AttributeError("The provided EPW object does not contain global horizontal radiation data.")
+        raise AttributeError("No global horizontal radiation data.")
     
-    # Extract the numerical values (list of 8760 hourly values)
     gh_rad_values = gh_rad_collection.values
-
-    # 3. Initialize the Sunpath calculator using the EPW location
     sp = Sunpath.from_location(location)
 
-    # Prepare lists to hold the plot data
-    azimuths = []
-    altitudes_inverted = []  # Plotly polar radius (center is zenith, edge is horizon)
-    radiation_values = []
-    hover_texts = []
-
-    # 4. Calculate sun position for every hour of the year (0 to 8759)
+    # 2. Bin hourly radiation data into monthly averages
+    avg_rad = {m: {h: [] for h in range(24)} for m in range(1, 13)}
+    
     for hoy in range(8760):
-        # Get the sun object for the specific hour of the year
-        sun = sp.calculate_sun_from_hoy(hoy)
-        
-        # We only care about hours when the sun is above the horizon
-        if sun.altitude > 0:
-            azimuths.append(sun.azimuth)
-            
-            # In Plotly's polar chart, radius corresponds to distance from the center.
-            # To have the horizon (0 degrees) at the edge and zenith (90 degrees) at the center:
-            # radius = 90 - altitude
-            altitudes_inverted.append(90 - sun.altitude)
-            
-            radiation = gh_rad_values[hoy]
-            radiation_values.append(radiation)
-            
-            # Extract datetime for informative hover text
-            dt = sun.datetime
-            hover_text = (
-                f"Date: {dt.month}/{dt.day} {dt.hour:02d}:00<br>"
-                f"Azimuth: {sun.azimuth:.1f}°<br>"
-                f"Altitude: {sun.altitude:.1f}°<br>"
-                f"Global Horiz Rad: {radiation:.1f} Wh/m²"
-            )
-            hover_texts.append(hover_text)
+        try:
+            dt = DateTime.from_hoy(hoy)
+            avg_rad[dt.month][dt.hour].append(gh_rad_values[hoy])
+        except:
+            pass
 
-    # 5. Create the Plotly polar scatter plot
-    fig = go.Figure()
+    for m in range(1, 13):
+        for h in range(24):
+            if len(avg_rad[m][h]) > 0:
+                avg_rad[m][h] = sum(avg_rad[m][h]) / len(avg_rad[m][h])
+            else:
+                avg_rad[m][h] = 0
 
+    # 3. Calculate Daily Curves (Solstices and Equinoxes)
+    daily_r, daily_theta = [], []
+    daily_sx, daily_sy = [], []
+    daily_ex, daily_ey = [], []
+    
+    months_for_curves = [12, 1, 2, 3, 4, 5, 6]
+    for m in months_for_curves:
+        dt_base = DateTime(m, 21, 0, 0)
+        base_hoy = dt_base.hoy
+        for offset in range(0, 240, 2):
+            hoy = base_hoy + offset / 10.0
+            if hoy >= 8760: continue
+            sun = sp.calculate_sun_from_hoy(hoy)
+            if sun.altitude > 0:
+                azi = sun.azimuth
+                alt = sun.altitude
+                
+                daily_r.append(90 - alt)
+                daily_theta.append(azi)
+                
+                azi_rad = math.radians(azi)
+                alt_rad = math.radians(alt)
+                
+                daily_sx.append(math.cos(alt_rad) * math.sin(azi_rad))
+                daily_sy.append(math.sin(alt_rad))
+                
+                daily_ex.append(math.cos(alt_rad) * math.cos(azi_rad))
+                daily_ey.append(math.sin(alt_rad))
+                
+        # Insert None to break line segments
+        daily_r.append(None); daily_theta.append(None)
+        daily_sx.append(None); daily_sy.append(None)
+        daily_ex.append(None); daily_ey.append(None)
+
+    # 4. Calculate Analemma Curves
+    ana_r, ana_theta = [], []
+    ana_sx, ana_sy = [], []
+    ana_ex, ana_ey = [], []
+    
+    for h in range(24):
+        has_pts = False
+        for doy in range(0, 365, 5):
+            hoy = doy * 24 + h
+            if hoy >= 8760: continue
+            sun = sp.calculate_sun_from_hoy(hoy)
+            if sun.altitude > 0:
+                has_pts = True
+                azi = sun.azimuth
+                alt = sun.altitude
+                
+                ana_r.append(90 - alt)
+                ana_theta.append(azi)
+                
+                azi_rad = math.radians(azi)
+                alt_rad = math.radians(alt)
+                
+                ana_sx.append(math.cos(alt_rad) * math.sin(azi_rad))
+                ana_sy.append(math.sin(alt_rad))
+                
+                ana_ex.append(math.cos(alt_rad) * math.cos(azi_rad))
+                ana_ey.append(math.sin(alt_rad))
+        if has_pts:
+            ana_r.append(None); ana_theta.append(None)
+            ana_sx.append(None); ana_sy.append(None)
+            ana_ex.append(None); ana_ey.append(None)
+
+    # 5. Calculate Hourly Scatter Points
+    dots_azi, dots_alt_polar = [], []
+    dots_sx, dots_sy = [], []
+    dots_ex, dots_ey = [], []
+    dots_color, dots_text = [], []
+    
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    for m in range(1, 13):
+        for h in range(24):
+            dt = DateTime(m, 21, h, 0)
+            if dt.hoy >= 8760: continue
+            sun = sp.calculate_sun_from_hoy(dt.hoy)
+            if sun.altitude > 0:
+                azi = sun.azimuth
+                alt = sun.altitude
+                rad = avg_rad[m][h]
+                
+                dots_azi.append(azi)
+                dots_alt_polar.append(90 - alt)
+                
+                azi_rad = math.radians(azi)
+                alt_rad = math.radians(alt)
+                
+                dots_sx.append(math.cos(alt_rad) * math.sin(azi_rad))
+                dots_sy.append(math.sin(alt_rad))
+                
+                dots_ex.append(math.cos(alt_rad) * math.cos(azi_rad))
+                dots_ey.append(math.sin(alt_rad))
+                
+                dots_color.append(rad)
+                dots_text.append(
+                    f"{month_names[m-1]} 21, {h:02d}:00<br>"
+                    f"Azimuth: {azi:.1f}°<br>"
+                    f"Altitude: {alt:.1f}°<br>"
+                    f"Avg GH Rad: {rad:.1f} Wh/m²"
+                )
+
+    # 6. Create Figure with Subplots
+    fig = make_subplots(
+        rows=2, cols=2,
+        specs=[
+            [{"type": "polar", "colspan": 2}, None],
+            [{"type": "xy"}, {"type": "xy"}]
+        ],
+        row_heights=[0.7, 0.3],
+        vertical_spacing=0.1,
+        horizontal_spacing=0.05,
+        subplot_titles=("", "South Elevation", "East Elevation")
+    )
+
+    line_color = 'rgba(150, 150, 150, 0.4)'
+    
+    # --- TOP VIEW (Polar) ---
     fig.add_trace(go.Scatterpolar(
-        r=altitudes_inverted,
-        theta=azimuths,
-        mode='markers',
+        r=daily_r, theta=daily_theta, mode='lines',
+        line=dict(color=line_color, width=1),
+        hoverinfo='skip', showlegend=False
+    ), row=1, col=1)
+    
+    fig.add_trace(go.Scatterpolar(
+        r=ana_r, theta=ana_theta, mode='lines',
+        line=dict(color=line_color, width=1),
+        hoverinfo='skip', showlegend=False
+    ), row=1, col=1)
+    
+    max_color = max(dots_color) if dots_color else 1000
+    fig.add_trace(go.Scatterpolar(
+        r=dots_alt_polar, theta=dots_azi, mode='markers',
         marker=dict(
-            size=6,
-            color=radiation_values,
-            colorscale='YlOrRd',          # Warm color scale suitable for solar radiation
+            size=7, color=dots_color, colorscale='Turbo',
+            cmin=0, cmax=max_color,
             showscale=True,
             colorbar=dict(
-                title='Global Horiz Rad<br>(Wh/m²)',
-                tickfont=dict(size=10)
+                title='Wh/m²',
+                x=0.02, y=0.75, len=0.45,
+                tickfont=dict(size=10),
+                thickness=15
             ),
-            opacity=0.8,
-            line=dict(width=0)
+            line=dict(color='black', width=0.5)
         ),
-        text=hover_texts,
-        hoverinfo='text',
-        name='Sun Positions'
-    ))
+        text=dots_text, hoverinfo='text', name='Sun Position'
+    ), row=1, col=1)
 
-    # 6. Define the chart layout for the SunPath
+    # --- SOUTH ELEVATION ---
+    dome_a = [math.radians(a) for a in range(181)]
+    dome_x = [math.cos(a) for a in dome_a]
+    dome_z = [math.sin(a) for a in dome_a]
+    
+    fig.add_trace(go.Scatter(x=dome_x, y=dome_z, mode='lines', line=dict(color='lightgray', width=1, dash='dash'), hoverinfo='skip', showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter(x=[-1, 1], y=[0, 0], mode='lines', line=dict(color='lightgray', width=1, dash='dash'), hoverinfo='skip', showlegend=False), row=2, col=1)
+    
+    fig.add_trace(go.Scatter(x=daily_sx, y=daily_sy, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter(x=ana_sx, y=ana_sy, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter(x=dots_sx, y=dots_sy, mode='markers', marker=dict(size=4.5, color=dots_color, colorscale='Turbo', cmin=0, cmax=max_color, line=dict(color='black', width=0.5)), text=dots_text, hoverinfo='text', showlegend=False), row=2, col=1)
+
+    # --- EAST ELEVATION ---
+    fig.add_trace(go.Scatter(x=dome_x, y=dome_z, mode='lines', line=dict(color='lightgray', width=1, dash='dash'), hoverinfo='skip', showlegend=False), row=2, col=2)
+    fig.add_trace(go.Scatter(x=[-1, 1], y=[0, 0], mode='lines', line=dict(color='lightgray', width=1, dash='dash'), hoverinfo='skip', showlegend=False), row=2, col=2)
+    
+    fig.add_trace(go.Scatter(x=daily_ex, y=daily_ey, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=2)
+    fig.add_trace(go.Scatter(x=ana_ex, y=ana_ey, mode='lines', line=dict(color=line_color, width=1), hoverinfo='skip', showlegend=False), row=2, col=2)
+    fig.add_trace(go.Scatter(x=dots_ex, y=dots_ey, mode='markers', marker=dict(size=4.5, color=dots_color, colorscale='Turbo', cmin=0, cmax=max_color, line=dict(color='black', width=0.5)), text=dots_text, hoverinfo='text', showlegend=False), row=2, col=2)
+
+    # --- LAYOUT UPDATES ---
     fig.update_layout(
         autosize=True,
         title=dict(
-            text=f"Sun Path - {location.city}, {location.country}",
-            font=dict(size=18, family="Arial"),
-            x=0.5,
-            xanchor='center'
+            text=f"<b>SUN PATH</b><br><span style='font-size:14px; color:gray'>SOLAR RADIATION ANALYSIS</span><br><b>{location.city.upper()}, {location.country.upper()}</b>",
+            font=dict(family="Arial"),
+            x=0.05, y=0.95
         ),
         polar=dict(
-            # Configure the radial axis (Altitude)
-            radialaxis=dict(
-                visible=True,
-                range=[0, 90],
-                # Custom ticks to show actual altitude degrees (90 at center, 0 at edge)
-                tickvals=[0, 15, 30, 45, 60, 75, 90],
-                ticktext=['90°', '75°', '60°', '45°', '30°', '15°', '0°'],
-                title=dict(text='Altitude', font=dict(size=12)),
-                showline=False,
-                gridcolor='lightgray'
-            ),
-            # Configure the angular axis (Azimuth)
-            angularaxis=dict(
-                visible=True,
-                direction='clockwise', # Standard for compass/sunpath directions
-                rotation=90,           # Set 0 azimuth (North) to the top
-                tickvals=[0, 45, 90, 135, 180, 225, 270, 315],
-                ticktext=['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
-                gridcolor='lightgray'
-            ),
-            bgcolor='rgba(250, 250, 250, 0.9)'
+            radialaxis=dict(visible=True, range=[0, 90], tickvals=[0, 15, 30, 45, 60, 75, 90], ticktext=['90°', '75°', '60°', '45°', '30°', '15°', '0°'], showline=False, gridcolor='lightgray'),
+            angularaxis=dict(visible=True, direction='clockwise', rotation=90, tickvals=[0, 45, 90, 135, 180, 225, 270, 315], ticktext=['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], gridcolor='lightgray'),
+            bgcolor='rgba(250,250,250,0.5)'
         ),
-        # General styling
         plot_bgcolor='white',
         paper_bgcolor='white',
-        margin=dict(t=80, b=40, l=40, r=40),
-        showlegend=False
+        margin=dict(t=120, b=40, l=40, r=40),
+        annotations=[
+            dict(text="SUMMER SOLSTICE", x=0.95, y=0.85, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="gray", family="Arial")),
+            dict(text="EQUINOX", x=0.95, y=0.72, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="gray", family="Arial")),
+            dict(text="WINTER SOLSTICE", x=0.95, y=0.58, xref="paper", yref="paper", showarrow=False, font=dict(size=11, color="gray", family="Arial"))
+        ]
     )
+
+    fig.update_xaxes(title_text="West (W) ⟶ East (E)", range=[-1.1, 1.1], showgrid=False, zeroline=False, showticklabels=False, row=2, col=1)
+    fig.update_yaxes(title_text="Altitude", range=[-0.05, 1.1], showgrid=False, zeroline=False, showticklabels=False, scaleanchor="x", scaleratio=1, row=2, col=1)
+
+    fig.update_xaxes(title_text="South (S) ⟶ North (N)", range=[-1.1, 1.1], showgrid=False, zeroline=False, showticklabels=False, row=2, col=2)
+    fig.update_yaxes(title_text="", range=[-0.05, 1.1], showgrid=False, zeroline=False, showticklabels=False, scaleanchor="x2", scaleratio=1, row=2, col=2)
 
     return fig
