@@ -56,13 +56,14 @@ def get_info_table(epw):
         total_global_rad_kwh, diffuse_percentage = 0.0, 0.0
 
     # --- 3. Köppen-Geiger / Climate Zone Estimation ---
-    # Ladybug EPW objects don't always directly expose a Köppen-Geiger property unless parsed 
-    # from a specific header field. We will check for ASHRAE zone first as a fallback, 
-    # then do a rough temperature-based estimation if needed.
+    # Ladybug EPW objects don't always directly expose a Köppen-Geiger property, 
+    # but we check for it first, then use a temperature-based estimation.
     climate_zone = "Unknown"
     
-    if hasattr(epw, 'ashrae_climate_zone') and epw.ashrae_climate_zone:
-        climate_zone = f"ASHRAE Zone {epw.ashrae_climate_zone}"
+    if hasattr(epw, 'koppen_geiger_climate_zone') and epw.koppen_geiger_climate_zone:
+        climate_zone = f"{epw.koppen_geiger_climate_zone}"
+    elif hasattr(epw, 'location') and hasattr(epw.location, 'koppen_geiger') and epw.location.koppen_geiger:
+        climate_zone = f"{epw.location.koppen_geiger}"
     else:
         # Rough estimation fallback based on average temperatures (highly simplified)
         if avg_temp >= 18:
@@ -99,7 +100,7 @@ def get_info_table(epw):
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f4f4f4;">
-                <span style="color: #64748b; font-size: 0.95rem;">Climate Zone</span>
+                <span style="color: #64748b; font-size: 0.95rem;">Köppen Climate Class.</span>
                 <span style="font-weight: 600; font-size: 1rem; color: #0f172a;">{climate_zone}</span>
             </div>
 
