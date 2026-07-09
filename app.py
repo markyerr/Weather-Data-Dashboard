@@ -210,15 +210,16 @@ def main():
             st.subheader("Wind Rose Analysis")
             st.plotly_chart(wind_fig, use_container_width=True)
                 
-            st.subheader("Temperature & Humidity Heatmap")
-            st.plotly_chart(th_rh_fig, use_container_width=True)
-                
         with col_right:
             st.subheader("Sunpath Diagram")
             st.plotly_chart(sunpath_fig, use_container_width=True)
                 
             st.subheader("Psychrometric Analysis")
             st.plotly_chart(psych_fig, use_container_width=True)
+            
+        st.divider()
+        st.subheader("Temperature & Humidity Heatmap")
+        st.plotly_chart(th_rh_fig, use_container_width=True)
             
         st.divider()
         st.subheader("Precipitation Analysis")

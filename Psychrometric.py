@@ -127,6 +127,8 @@ def generate_chart(epw):
     
     # 6. Configure the chart layout to be clean, professional, and readable
     fig.update_layout(
+        width=2560,
+        height=1440,
         title=f'Psychrometric Chart - {location_name}',
         title_font=dict(size=20, family='Arial, sans-serif'),
         xaxis_title='Dry Bulb Temperature (°C)',

@@ -62,6 +62,8 @@ def generate_chart(epw):
 
     # Update the layout to make it clean, descriptive, and standard
     fig.update_layout(
+        width=2560,
+        height=1440,
         title="Annual Daily Precipitation",
         xaxis=dict(
             title="",

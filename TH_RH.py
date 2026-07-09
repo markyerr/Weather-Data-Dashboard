@@ -123,7 +123,7 @@ def generate_chart(epw):
                 direction="left",
                 buttons=list([
                     dict(
-                        label="Toggle Precipitation",
+                        label="<b>Toggle Precipitation ⚪</b>",
                         method="restyle",
                         args=[{"visible": [True, True, True]}],
                         args2=[{"visible": [True, True, False]}]
@@ -132,8 +132,12 @@ def generate_chart(epw):
                 showactive=False,
                 x=1.0,
                 xanchor="right",
-                y=1.1,
-                yanchor="top"
+                y=0.48, # Positioned above the Relative Humidity subplot
+                yanchor="bottom",
+                bgcolor="#4dc3c6", # Teal color similar to the gradient in the picture
+                bordercolor="#4dc3c6",
+                font=dict(color="white", size=12),
+                pad=dict(r=10, t=5, b=5, l=10)
             )
         ]
     )
@@ -148,7 +152,8 @@ def generate_chart(epw):
         current_day += d
         
     fig.update_layout(
-        height=900,
+        height=1440,
+        width=2560,
         margin=dict(l=100, r=50, t=80, b=50),
         plot_bgcolor='white',
         title=dict(text=f"Temperature & Humidity Heatmaps - {location}", x=0.5)
