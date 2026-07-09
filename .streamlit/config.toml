@@ -1,1 +1,30 @@
+[theme]
+    primaryColor = "#FF4B4B"
+    backgroundColor = "#FFFFFF"
+    secondaryBackgroundColor = "#F0F2F6"
+    textColor = "#31333F"
+    font = "sans serif"
 
+
+[server]
+# The port where the server will listen (Default is 8501)
+    port = 8501
+
+# Max size (in megabytes) for files uploaded with st.file_uploader (Default is 200)
+    maxUploadSize = 500 
+
+# Run the app without opening a browser window automatically (Useful for cloud deployment)
+    headless = false
+
+
+[browser]
+# Set to false to stop sending usage statistics to Streamlit
+    gatherUsageStats = false
+
+
+[client]
+# Options: "auto", "expanded", "collapsed"
+    showSidebarNavigation = true
+
+# Hide the hamburger menu/toolbar in the top right
+    toolbarMode = "minimal"
