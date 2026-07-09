@@ -164,11 +164,7 @@ def main():
     elif data_source == "Provide EPW/ZIP URL":
         url_input = st.sidebar.text_input("Enter URL (e.g., from EnergyPlus):")
         
-        import streamlit.components.v1 as components
-        with st.sidebar:
-            st.caption("Use the map below to find and copy an EPW URL:")
-            components.iframe("https://www.ladybug.tools/epwmap/", height=450, scrolling=True)
-            
+
         if url_input:
             try:
                 epw = fetch_and_unzip_epw(url_input)
@@ -237,7 +233,13 @@ def main():
         st.subheader("Precipitation Analysis")
         st.plotly_chart(precip_fig, use_container_width=True)
     else:
-        if data_source != "Use Default Data (Bangkok)":
+        if data_source == "Provide EPW/ZIP URL":
+            st.info("Please provide data to view the dashboard.")
+            st.markdown("### 🗺️ Find your EPW URL")
+            st.markdown("Use the interactive map below to find weather data. Click on a location, copy the EPW or ZIP URL, and paste it into the sidebar.")
+            import streamlit.components.v1 as components
+            components.iframe("https://www.ladybug.tools/epwmap/", height=600, scrolling=True)
+        elif data_source != "Use Default Data (Bangkok)":
             st.info("Please provide data to view the dashboard.")
 
 if __name__ == "__main__":
